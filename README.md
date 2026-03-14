@@ -16,7 +16,7 @@ Ex.: automaticPilotControl.x
 * @file    : nomeDoArquivo.x
 * @brief   : Descrição da funcionalidade do arquivo
 ******************************************************************************
-* @author  : Luccas Bastos e Vinicius Balbino
+* @author  : Luccas Bastos e João Vitor Roque
 * @date    : Data de criação
 * @version : Data da última versão (provavelmente hoje)
 ******************************************************************************
@@ -105,20 +105,4 @@ A linha deve ter no máximo oitenta caracteres, se for ultrapassado esse limite,
 ```
 
 ## Projetos desenvolvidos na disciplina
-### Aula 2 - Familiarização com o kit de desenvolvimento e com a IDE
-Atividade 1 - Piscar LED.
 
-### Aula 4 - Apresentação dos requisitos do projeto prático da disciplina e modelagem
-Atividade 2 - Análise de requisitos do projeto e início da modelagem.
-
-### Aula 6 - Desenvolvimento de uma biblioteca para leitura dos botões e controle dos LEDs por GPIO. Uso de GPIO com registradores.
-Atividade 3 - Controlar os botões e leds através dos registradores da placa STM.
-
-### Aula 8 - Uso de timers e interrupções. Desenvolvimento de uma biblioteca para o teclado matricial utilizando multiplexação do tempo.
-Atividade 4 - Controlar através do teclado matricial o uso de timers.
-
-### Aula 10 - Interrupções e Debouncing de GPIOs
-Atividade 5 - 
-
-### Aula 12 - Implementação do protocolo de comunicação
-Atividade 6 - 
