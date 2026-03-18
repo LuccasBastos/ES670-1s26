@@ -1,10 +1,8 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-********************************************************************************
- * @file    : main.c
+/*
+ *******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
  * @brief   : Simulação de máquina de café.
  * @author  : João Vitor Roque Ribeiro & Luccas Pereira Bastos
  * @date    : 06-Mar-2026
@@ -41,7 +39,8 @@
 		  ESTADO_INICIAL, //IDLE
 		  ESTADO_SELECAO, // SELECTED
 		  ESTADO_PREPARANDO, //BREWING
-		  ESTADO_FINALIZANDO //BIP
+		  ESTADO_FINALIZANDO, //BIP
+		  ESTADO_ERRO // QUANTIDADE MÍNIMA AUSENTE
 	  } xEstadoMaquina;
 
 	 typedef enum {
@@ -72,9 +71,19 @@
   volatile xBebidaSelecionada xBebidaAtual = NENHUMA;
   volatile uint16_t usContadorTempo = 0;
 
-  int getPoCap=1000, getPoMoc=1000, getPoCho=1000, getPoExp=1000;
-  int getCap=0, getMoc=0, getCho=0, getExp=0;
-  int setZero=0;
+// Struct com os dados da maquina
+MaquinaCafe_t xMaquinaDados = {
+    .usCapacidadeMaxPo = 1000,
+    .usPoAtualCap = 0,
+    .usPoAtualMoc = 0,
+    .usPoAtualCho = 0,
+    .usPoAtualExp = 0,
+    .ucVendasCap = 0,
+    .ucVendasMoc = 0,
+    .ucVendasCho = 0,
+    .ucVendasExp = 0,
+    .ucVendasTotais = 0
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -207,7 +216,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         switch (xEstadoAtual) {
             case ESTADO_INICIAL:
                 if (usContadorTempo >= 1000) {
-                	// Todos os leds piscam a cada 1 segundo aguardando selecao
+                    // Todos os leds piscam a cada 1 segundo aguardando selecao
                     HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
                     HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
                     HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
@@ -242,20 +251,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
                 } else {
                 	switch (xBebidaAtual) {
 						case EXPRESSO:
-							getExp++;
-							getPoExp = getPoExp - 100;
+							xMaquinaDados.ucVendasExp++;
+							xMaquinaDados.ucVendasTotais++;
+							xMaquinaDados.usPoAtualExp -= 100;
 							break;
 						case CAPUCCINO:
-							getCap++;
-							getPoCap = getPoCap - 100;
+							xMaquinaDados.ucVendasCap++;
+							xMaquinaDados.ucVendasTotais++;
+							xMaquinaDados.usPoAtualCap -= 100;
 							break;
 						case MOCHA:
-							getMoc++;
-							getPoMoc = getPoMoc - 100;
+							xMaquinaDados.ucVendasMoc++;
+							xMaquinaDados.ucVendasTotais++;
+							xMaquinaDados.usPoAtualMoc -= 100;
 							break;
 						case CHOCOLATE:
-							getCho++;
-							getPoCho = getPoCho - 100;
+							xMaquinaDados.ucVendasCho++;
+							xMaquinaDados.ucVendasTotais++;
+							xMaquinaDados.usPoAtualCho -= 100;
 							break;
 						default:
 							break;
@@ -299,11 +312,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 				}
 				break;
 
-            default:
+
+            case ESTADO_ERRO:
+            	// Acionamento do buzzer simulando 2 bipes rápidos
+            	if (usContadorTempo == 1){ // Inicia bip 2
+            		HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
+                }else if (usContadorTempo == 200){
+                	HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1); // Para bip 1
+                }else if (usContadorTempo == 400){
+                	HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1); // Inicia bip 2
+                }else if (usContadorTempo == 600){
+                	HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1); // Para bip 2
+                }
+
+                // Após 1 segundo, retorna para estado inicial piscando as luzes
+                if (usContadorTempo >= 1000) {
+                	HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+                    xEstadoAtual = ESTADO_INICIAL;
+                    usContadorTempo = 0;
+                }
                 break;
-        }
-    }
-}
+
+			default:
+				break;
+					}
+				}
+			}
 
 /**
 ******************************************************************************
@@ -387,10 +421,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
                 	int poSuficiente = 0;
 
-                	if (xBebidaAtual == EXPRESSO && getPoExp >= 100) poSuficiente = 1;
-					else if (xBebidaAtual == CAPUCCINO && getPoCap >= 100) poSuficiente = 1;
-					else if (xBebidaAtual == MOCHA && getPoMoc >= 100) poSuficiente = 1;
-					else if (xBebidaAtual == CHOCOLATE && getPoCho >= 100) poSuficiente = 1;
+                	if (xBebidaAtual == EXPRESSO && xMaquinaDados.usPoAtualExp >= 100) poSuficiente = 1;
+					else if (xBebidaAtual == CAPUCCINO && xMaquinaDados.usPoAtualCap >= 100) poSuficiente = 1;
+					else if (xBebidaAtual == MOCHA && xMaquinaDados.usPoAtualMoc >= 100) poSuficiente = 1;
+					else if (xBebidaAtual == CHOCOLATE && xMaquinaDados.usPoAtualCho >= 100) poSuficiente = 1;
 
 					if (poSuficiente == 1) {
 						xEstadoAtual = ESTADO_PREPARANDO;
@@ -398,7 +432,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 						HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
 					} else {
 						// Sem pó suficiente! Cancela a operação e volta pro início.
-						xEstadoAtual = ESTADO_INICIAL;
+						xEstadoAtual = ESTADO_ERRO;
+						usContadorTempo = 0;
 						xBebidaAtual = NENHUMA;
 
 						// Apaga os LEDs para mostrar pro usuário que o pedido foi cancelado
@@ -409,6 +444,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 						HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
 					}
+
                 }
                 break;
 
@@ -448,7 +484,7 @@ void Error_Handler(void)
 #ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
+  * where the assert_param error has occurred.
   * @param  file: pointer to the source file name
   * @param  line: assert_param error line source number
   * @retval None
