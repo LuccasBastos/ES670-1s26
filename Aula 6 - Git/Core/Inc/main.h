@@ -43,7 +43,25 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+// Definição da estrutura de dados da máquina de café
+typedef struct {
+    unsigned short int usCapacidadeMaxPo; // Capacidade máxima (1000)
 
+    // Quantidade atual de pó
+    unsigned short int usPoAtualCap;
+    unsigned short int usPoAtualMoc;
+    unsigned short int usPoAtualCho;
+    unsigned short int usPoAtualExp;
+
+    // Quantidade vendida individualmente
+    unsigned char ucVendasCap;
+    unsigned char ucVendasMoc;
+    unsigned char ucVendasCho;
+    unsigned char ucVendasExp;
+
+    // Quantidade vendida no total
+    unsigned char ucVendasTotais;
+} MaquinaCafe_t;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
