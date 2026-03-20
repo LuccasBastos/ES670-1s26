@@ -1,24 +1,14 @@
 /* USER CODE BEGIN Header */
 /*
- *******************************************************************************
- * @file           : main.c
- * @brief          : Main program body
- * @brief   : Simulação de máquina de café.
- * @author  : João Vitor Roque Ribeiro & Luccas Pereira Bastos
- * @date    : 06-Mar-2026
- * @version : 1.0
- ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+******************************************************************************
+* @file    : main.c
+* @brief   : Arquivo principal com a maquina de estados da maquina de cafe
+******************************************************************************
+* @author  : Lucca Bastos e Joao Vitor Roque
+* @date    : 12-Mar-2026
+* @version : 19-Mar-2026
+******************************************************************************
+*/
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -35,21 +25,21 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-	typedef enum {
-		  ESTADO_INICIAL, //IDLE
-		  ESTADO_SELECAO, // SELECTED
-		  ESTADO_PREPARANDO, //BREWING
-		  ESTADO_FINALIZANDO, //BIP
-		  ESTADO_ERRO // QUANTIDADE MÍNIMA AUSENTE
-	  } xEstadoMaquina;
+typedef enum {
+  ESTADO_INICIAL, //IDLE
+  ESTADO_SELECAO, // SELECTED
+  ESTADO_PREPARANDO, //BREWING
+  ESTADO_FINALIZANDO, //BIP
+  ESTADO_ERRO // QUANTIDADE MÍNIMA AUSENTE
+} xEstadoMaquina;
 
-	 typedef enum {
-		  NENHUMA,
-		  EXPRESSO,    // CIMA: Amarelo
-		  CAPUCCINO,   // BAIXO: Vermelho
-		  MOCHA,       // ESQUERDA: Verde
-		  CHOCOLATE    // DIREITA: Azul
-	  } xBebidaSelecionada;
+typedef enum {
+  NENHUMA,
+  EXPRESSO,    // CIMA: Amarelo
+  CAPUCCINO,   // BAIXO: Vermelho
+  MOCHA,       // ESQUERDA: Verde
+  CHOCOLATE    // DIREITA: Azul
+} xBebidaSelecionada;
 
 /* USER CODE END PTD */
 
@@ -66,23 +56,23 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-  unsigned char ucRecBuff;
-  volatile xEstadoMaquina xEstadoAtual = ESTADO_INICIAL;
-  volatile xBebidaSelecionada xBebidaAtual = NENHUMA;
-  volatile uint16_t usContadorTempo = 0;
+unsigned char ucRecBuff;
+volatile xEstadoMaquina xEstadoAtual = ESTADO_INICIAL;
+volatile xBebidaSelecionada xBebidaAtual = NENHUMA;
+volatile uint16_t usContadorTempo = 0;
 
 // Struct com os dados da maquina
 MaquinaCafe_t xMaquinaDados = {
-    .usCapacidadeMaxPo = 1000,
-    .usPoAtualCap = 0,
-    .usPoAtualMoc = 0,
-    .usPoAtualCho = 0,
-    .usPoAtualExp = 0,
-    .ucVendasCap = 0,
-    .ucVendasMoc = 0,
-    .ucVendasCho = 0,
-    .ucVendasExp = 0,
-    .ucVendasTotais = 0
+  .usCapacidadeMaxPo = 1000,
+  .usPoAtualCap = 0,
+  .usPoAtualMoc = 0,
+  .usPoAtualCho = 0,
+  .usPoAtualExp = 0,
+  .ucVendasCap = 0,
+  .ucVendasMoc = 0,
+  .ucVendasCho = 0,
+  .ucVendasExp = 0,
+  .ucVendasTotais = 0
 };
 /* USER CODE END PV */
 
@@ -208,136 +198,135 @@ void SystemClock_Config(void)
 ******************************************************************************
 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	// Verifica se a interrupcao veio do TIM6
-	if (htim->Instance == TIM6) {
-		// Incrementa a variavel de controle de tempo em milissegundos
-        usContadorTempo++;
+  // Verifica se a interrupcao veio do TIM6
+  if (htim->Instance == TIM6) {
+    // Incrementa a variavel de controle de tempo em milissegundos
+    usContadorTempo++;
 
-        switch (xEstadoAtual) {
-            case ESTADO_INICIAL:
-                if (usContadorTempo >= 1000) {
-                    // Todos os leds piscam a cada 1 segundo aguardando selecao
-                    HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-                    HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
-                    HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
-                    HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
-                    // Zera o contador de tempo apos os leds piscarem
-                    usContadorTempo = 0;
-                }
+    switch (xEstadoAtual) {
+      case ESTADO_INICIAL:
+        if (usContadorTempo >= 1000) {
+          // Todos os leds piscam a cada 1 segundo aguardando selecao
+          HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+          HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
+          HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
+          HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
+          // Zera o contador de tempo apos os leds piscarem
+          usContadorTempo = 0;
+        }
+        break;
+
+      case ESTADO_PREPARANDO:
+        // Verifica se a preparacao da bebida ainda nao chegou a 20s
+        if (usContadorTempo < 20000) {
+          // A cada 1 segundo pisca o led correspondente
+          if (usContadorTempo % 1000 == 0) {
+            switch (xBebidaAtual) {
+              case EXPRESSO:
+                HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
                 break;
-
-            case ESTADO_PREPARANDO:
-            	// Verifica se a preparacao da bebida ainda nao chegou a 20s
-                if (usContadorTempo < 20000) {
-                	// A cada 1 segundo pisca o led correspondente
-                    if (usContadorTempo % 1000 == 0) {
-                        switch (xBebidaAtual) {
-                            case EXPRESSO:
-                            	HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
-                            	break;
-                            case CAPUCCINO:
-                            	HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-                            	break;
-                            case MOCHA:
-                            	HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
-                            	break;
-                            case CHOCOLATE:
-                            	HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
-                            	break;
-                            default:
-                            	break;
-                        }
-                    }
-                } else {
-                	switch (xBebidaAtual) {
-						case EXPRESSO:
-							xMaquinaDados.ucVendasExp++;
-							xMaquinaDados.ucVendasTotais++;
-							xMaquinaDados.usPoAtualExp -= 100;
-							break;
-						case CAPUCCINO:
-							xMaquinaDados.ucVendasCap++;
-							xMaquinaDados.ucVendasTotais++;
-							xMaquinaDados.usPoAtualCap -= 100;
-							break;
-						case MOCHA:
-							xMaquinaDados.ucVendasMoc++;
-							xMaquinaDados.ucVendasTotais++;
-							xMaquinaDados.usPoAtualMoc -= 100;
-							break;
-						case CHOCOLATE:
-							xMaquinaDados.ucVendasCho++;
-							xMaquinaDados.ucVendasTotais++;
-							xMaquinaDados.usPoAtualCho -= 100;
-							break;
-						default:
-							break;
-					}
-
-                	// Apos os 20s, muda para o estado final e apaga os leds
-                    xEstadoAtual = ESTADO_FINALIZANDO;
-                    usContadorTempo = 0;
-                    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
-                    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-                    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
-                    HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
-                }
+              case CAPUCCINO:
+                HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
                 break;
-
-            case ESTADO_FINALIZANDO:
-            	// Acionamento do buzzer simulando 3 bipes com intervalos de 500ms
-				if (usContadorTempo == 1){
-					HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-				}else if (usContadorTempo == 500){
-					// Fim do primeiro bip
-					HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-				}else if (usContadorTempo == 1000){
-					HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-				}else if (usContadorTempo == 1500){
-					// Fim do segundo bipe
-					HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-				}else if (usContadorTempo == 2000){
-					HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-				}else if (usContadorTempo == 2500){
-					// Fim do terceiro bipe
-					HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-				}
-				if (usContadorTempo >= 3000) {
-					// Finaliza o ciclo e retorna maquina para estado inicial
-					// Garantia física que o buzzer está mudo na linha 266
-					HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-					xEstadoAtual = ESTADO_INICIAL;
-					xBebidaAtual = NENHUMA;
-					usContadorTempo = 0;
-				}
-				break;
-
-
-            case ESTADO_ERRO:
-            	// Acionamento do buzzer simulando 2 bipes rápidos
-            	if (usContadorTempo == 1){ // Inicia bip 2
-            		HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-                }else if (usContadorTempo == 200){
-                	HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1); // Para bip 1
-                }else if (usContadorTempo == 400){
-                	HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1); // Inicia bip 2
-                }else if (usContadorTempo == 600){
-                	HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1); // Para bip 2
-                }
-
-                // Após 1 segundo, retorna para estado inicial piscando as luzes
-                if (usContadorTempo >= 1000) {
-                	HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-                    xEstadoAtual = ESTADO_INICIAL;
-                    usContadorTempo = 0;
-                }
+              case MOCHA:
+                HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
                 break;
+              case CHOCOLATE:
+                HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
+                break;
+              default:
+                break;
+            }
+          }
+        } else {
+          switch (xBebidaAtual) {
+            case EXPRESSO:
+              xMaquinaDados.ucVendasExp++;
+              xMaquinaDados.ucVendasTotais++;
+              xMaquinaDados.usPoAtualExp -= 100;
+              break;
+            case CAPUCCINO:
+              xMaquinaDados.ucVendasCap++;
+              xMaquinaDados.ucVendasTotais++;
+              xMaquinaDados.usPoAtualCap -= 100;
+              break;
+            case MOCHA:
+              xMaquinaDados.ucVendasMoc++;
+              xMaquinaDados.ucVendasTotais++;
+              xMaquinaDados.usPoAtualMoc -= 100;
+              break;
+            case CHOCOLATE:
+              xMaquinaDados.ucVendasCho++;
+              xMaquinaDados.ucVendasTotais++;
+              xMaquinaDados.usPoAtualCho -= 100;
+              break;
+            default:
+              break;
+          }
 
-			default:
-				break;
-					}
-				}
-			}
+          // Apos os 20s, muda para o estado final e apaga os leds
+          xEstadoAtual = ESTADO_FINALIZANDO;
+          usContadorTempo = 0;
+          HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+          HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+          HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+          HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
+        }
+        break;
+
+      case ESTADO_FINALIZANDO:
+        // Acionamento do buzzer simulando 3 bipes com intervalos de 500ms
+        if (usContadorTempo == 1) {
+          HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
+        } else if (usContadorTempo == 500) {
+          // Fim do primeiro bip
+          HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+        } else if (usContadorTempo == 1000) {
+          HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
+        } else if (usContadorTempo == 1500) {
+          // Fim do segundo bipe
+          HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+        } else if (usContadorTempo == 2000) {
+          HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
+        } else if (usContadorTempo == 2500) {
+          // Fim do terceiro bipe
+          HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+        }
+        if (usContadorTempo >= 3000) {
+          // Finaliza o ciclo e retorna maquina para estado inicial
+          HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+          xEstadoAtual = ESTADO_INICIAL;
+          xBebidaAtual = NENHUMA;
+          usContadorTempo = 0;
+        }
+        break;
+
+
+      case ESTADO_ERRO:
+        // Acionamento do buzzer 2 vezes rapidamente
+        if (usContadorTempo == 1) { // Inicia bip 2
+          HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
+        } else if (usContadorTempo == 200) {
+          HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1); // Para bip 1
+        } else if (usContadorTempo == 400) {
+          HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1); // Inicia bip 2
+        } else if (usContadorTempo == 600) {
+          HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1); // Para bip 2
+        }
+
+        // Após 1 segundo, retorna para estado inicial piscando as luzes
+        if (usContadorTempo >= 1000) {
+          HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+          xEstadoAtual = ESTADO_INICIAL;
+          usContadorTempo = 0;
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+}
 
 /**
 ******************************************************************************
@@ -348,119 +337,127 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 ******************************************************************************
 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	// Ignora o input dos botoes durante o preparo
-    if (xEstadoAtual == ESTADO_PREPARANDO) return;
+  // Ignora o input dos botoes durante o preparo
+  if (xEstadoAtual == ESTADO_PREPARANDO) return;
 
-    GPIO_PinState xEstadoBotao;
+  GPIO_PinState xEstadoBotao;
 
-    // Mapeia a leitura do botao com a respectiva porta GPIO
+  // Mapeia a leitura do botao com a respectiva porta GPIO
+  switch (GPIO_Pin) {
+    case BT_Cima_Pin:
+      // PB6
+      xEstadoBotao = HAL_GPIO_ReadPin(GPIOB, GPIO_Pin);
+      break;
+    default:
+      // PC5, PC7, PC8, PC9
+      xEstadoBotao = HAL_GPIO_ReadPin(GPIOC, GPIO_Pin);
+      break;
+  }
+
+  // Aciona o buzzer enquanto o botao estiver sendo mantido pressionado
+  if (xEstadoBotao == GPIO_PIN_SET) {
+    HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
+  } else {
+    HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+  }
+
+  // Verifica as funcoes de cada botao apenas no momento em que ele e acionado
+  if (xEstadoBotao == GPIO_PIN_SET) {
     switch (GPIO_Pin) {
-        case BT_Cima_Pin:
-        	 // PB6
-            xEstadoBotao = HAL_GPIO_ReadPin(GPIOB, GPIO_Pin);
-            break;
-        default:
-        	// PC5, PC7, PC8, PC9
-            xEstadoBotao = HAL_GPIO_ReadPin(GPIOC, GPIO_Pin);
-            break;
-    }
+      case BT_Cima_Pin:
+        // Seleciona Expresso e mantem o led amarelo aceso
+        xBebidaAtual = EXPRESSO;
+        xEstadoAtual = ESTADO_SELECAO;
+        HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+        break;
 
-    // Aciona o buzzer enquanto o botao estiver sendo mantido pressionado
-    if (xEstadoBotao == GPIO_PIN_SET) {
-        HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-    } else {
-        HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-    }
+      case BT_Baixo_Pin:
+        // Seleciona Capuccino e mantem o led vermelho aceso
+        xBebidaAtual = CAPUCCINO;
+        xEstadoAtual = ESTADO_SELECAO;
+        HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+        break;
 
-    // Verifica as funcoes de cada botao apenas no momento em que ele e acionado
-    if (xEstadoBotao == GPIO_PIN_SET) {
-        switch (GPIO_Pin) {
-            case BT_Cima_Pin:
-            	// Seleciona Expresso e mantem o led amarelo aceso
-                xBebidaAtual = EXPRESSO;
-                xEstadoAtual = ESTADO_SELECAO;
-                HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_SET);
-                HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
-                break;
+      case BT_Esq_Pin:
+        // Seleciona Mocha e mantem o led verde aceso
+        xBebidaAtual = MOCHA;
+        xEstadoAtual = ESTADO_SELECAO;
+        HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+        break;
 
-            case BT_Baixo_Pin:
-            	// Seleciona Capuccino e mantem o led vermelho aceso
-                xBebidaAtual = CAPUCCINO;
-                xEstadoAtual = ESTADO_SELECAO;
-                HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
-                HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
-                break;
+      case BT_Dir_Pin:
+        // Seleciona Chocolate e mantem o led azul aceso
+        xBebidaAtual = CHOCOLATE;
+        xEstadoAtual = ESTADO_SELECAO;
+        HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
+        break;
 
-            case BT_Esq_Pin:
-            	// Seleciona Mocha e mantem o led verde aceso
-                xBebidaAtual = MOCHA;
-                xEstadoAtual = ESTADO_SELECAO;
-                HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
-                HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
-                break;
+      case BT_Enter_Pin:
+        // Se uma bebida foi escolhida, o botao Enter inicia o preparo
+        if ((xEstadoAtual == ESTADO_SELECAO) && (xBebidaAtual != NENHUMA)) {
 
-            case BT_Dir_Pin:
-            	// Seleciona Chocolate e mantem o led azul aceso
-                xBebidaAtual = CHOCOLATE;
-                xEstadoAtual = ESTADO_SELECAO;
-                HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
-                break;
+          int poSuficiente = 0;
 
-            case BT_Enter_Pin:
-            	// Se uma bebida foi escolhida, o botao Enter inicia o preparo
-                if ((xEstadoAtual == ESTADO_SELECAO) && (xBebidaAtual != NENHUMA)) {
+          if (xBebidaAtual == EXPRESSO && xMaquinaDados.usPoAtualExp >= 100) poSuficiente = 1;
+          else if (xBebidaAtual == CAPUCCINO && xMaquinaDados.usPoAtualCap >= 100) poSuficiente = 1;
+          else if (xBebidaAtual == MOCHA && xMaquinaDados.usPoAtualMoc >= 100) poSuficiente = 1;
+          else if (xBebidaAtual == CHOCOLATE && xMaquinaDados.usPoAtualCho >= 100) poSuficiente = 1;
 
-                	int poSuficiente = 0;
+          if (poSuficiente == 1) {
+            xEstadoAtual = ESTADO_PREPARANDO;
+            usContadorTempo = 0;
+            HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+          } else {
+            // Sem pó suficiente! Cancela a operação e volta pro início.
+            xEstadoAtual = ESTADO_ERRO;
+            usContadorTempo = 0;
+            xBebidaAtual = NENHUMA;
 
-                	if (xBebidaAtual == EXPRESSO && xMaquinaDados.usPoAtualExp >= 100) poSuficiente = 1;
-					else if (xBebidaAtual == CAPUCCINO && xMaquinaDados.usPoAtualCap >= 100) poSuficiente = 1;
-					else if (xBebidaAtual == MOCHA && xMaquinaDados.usPoAtualMoc >= 100) poSuficiente = 1;
-					else if (xBebidaAtual == CHOCOLATE && xMaquinaDados.usPoAtualCho >= 100) poSuficiente = 1;
+            // Apaga os LEDs para mostrar pro usuário que o pedido foi cancelado
+            HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
 
-					if (poSuficiente == 1) {
-						xEstadoAtual = ESTADO_PREPARANDO;
-						usContadorTempo = 0;
-						HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-					} else {
-						// Sem pó suficiente! Cancela a operação e volta pro início.
-						xEstadoAtual = ESTADO_ERRO;
-						usContadorTempo = 0;
-						xBebidaAtual = NENHUMA;
+            HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
+          }
 
-						// Apaga os LEDs para mostrar pro usuário que o pedido foi cancelado
-						HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, GPIO_PIN_RESET);
-						HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
-						HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-						HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
-
-						HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_1);
-					}
-
-                }
-                break;
-
-            default:
-                break;
         }
+        break;
+
+      default:
+        break;
     }
+  }
 }
 
+/**
+******************************************************************************
+* @method : HAL_UART_RxCpltCallback
+* @brief  : Callback chamado ao finalizar o recebimento por UART
+* @param  : huart - Ponteiro do handler da UART
+* @return : void
+******************************************************************************
+*/
 void HAL_UART_RxCpltCallback (UART_HandleTypeDef * huart){
-	if(huart == &hlpuart1)
-	{
-		HAL_UART_Transmit(&hlpuart1, &ucRecBuff,1,10);
-		CommunicationStateMachineProcessByteCommunication(ucRecBuff);
-		HAL_UART_Receive_IT(&hlpuart1, &ucRecBuff, 1);
-	}
+  if(huart == &hlpuart1)
+  {
+    HAL_UART_Transmit(&hlpuart1, &ucRecBuff, 1, 10);
+    vCommunicationStateMachineProcessByteCommunication(ucRecBuff);
+    HAL_UART_Receive_IT(&hlpuart1, &ucRecBuff, 1);
+  }
 
 }
 
